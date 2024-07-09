@@ -40,7 +40,7 @@ func authMiddleware(next http.Handler) http.Handler {
 // All gets
 
 // Get Sessions based on userID (restrict to 10 in the future maybe)
-func (app *App) SessionHandler(w http.ResponseWriter, r *http.Request) {
+func (app *App) SessionListHandler(w http.ResponseWriter, r *http.Request) {
 	userIDStr := chi.URLParam(r, "userID")
 	if len(userIDStr) < 1 {
 		http.Error(w, "Invalid user ID", http.StatusBadRequest)
@@ -66,8 +66,8 @@ func (app *App) SessionHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(body)
 }
 
-// Get Workouts based on sessionID (restrict to 10 in the future maybe)
-func (app *App) WorkoutHandler(w http.ResponseWriter, r *http.Request) {
+// Get Workouts based on sessionId
+func (app *App) WorkoutListHandler(w http.ResponseWriter, r *http.Request) {
 	var workoutResponse []Workout
 	sessionIDstr := chi.URLParam(r, "sessionID")
 	if len(sessionIDstr) < 1 {
@@ -92,6 +92,9 @@ func (app *App) WorkoutHandler(w http.ResponseWriter, r *http.Request) {
 			app.logger.Error().Msgf("WorkoutHandler: %v", err)
 			return
 		}
+		if len(sets) == 0 {
+			sets = []database.SetRow{}
+		}
 		workoutResponse = append(workoutResponse, Workout{WorkoutRow: workout, Sets: sets})
 	}
 	body, err := json.Marshal(workoutResponse)
@@ -103,4 +106,59 @@ func (app *App) WorkoutHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(body)
 }
 
-// Get Workouts and sets based on sessionID
+// Get sets based on workoutID
+func (app *App) SetListHandler(w http.ResponseWriter, r *http.Request) {
+	workoutIDstr := chi.URLParam(r, "workoutID")
+	if len(workoutIDstr) < 1 {
+		http.Error(w, "Invalid workout ID", http.StatusBadRequest)
+		return
+	}
+	workoutID, err := strconv.Atoi(workoutIDstr)
+	if err != nil {
+		http.Error(w, "Invalid workout ID", http.StatusBadRequest)
+		return
+	}
+	sets, err := app.db.GetSetsByWorkoutId(workoutID)
+	if err != nil {
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		app.logger.Error().Msgf("SetListHandler: %v", err)
+		return
+	}
+	body, err := json.Marshal(sets)
+	if err != nil {
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		app.logger.Error().Msgf("SetListHandler: %v", err)
+		return
+	}
+	w.Write(body)
+}
+
+func (app *App) WorkoutCreateHandler(w http.ResponseWriter, r *http.Request) {
+	var workout database.Workout
+	if err := json.NewDecoder(r.Body).Decode(&workout); err != nil {
+		http.Error(w, "Could not decode workout", http.StatusBadRequest)
+		return
+
+	}
+	if err := app.db.CreateWorkoutForSession(workout.SessionID, workout.WorkoutName); err != nil {
+		http.Error(w, "Could not decode workout", http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+}
+
+func (app *App) SetCreateHandler(w http.ResponseWriter, r *http.Request) {
+	var set database.Set
+	if err := json.NewDecoder(r.Body).Decode(&set); err != nil {
+		app.logger.Error().Msgf("%v", err)
+		http.Error(w, "Could not decode set", http.StatusBadRequest)
+		return
+
+	}
+	if err := app.db.CreateSetForWorkout(set.WorkoutID, set.NumberOfReps, set.Weight); err != nil {
+		app.logger.Error().Msgf("%v", err)
+		http.Error(w, "Could not add set to workout", http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+}

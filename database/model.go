@@ -32,7 +32,7 @@ type WorkoutRow struct {
 
 type Set struct {
 	WorkoutID    int
-	Weight       int
+	Weight       float32
 	NumberOfReps int
 }
 

@@ -10,4 +10,5 @@ type Config struct {
 	DatabasePassword     string
 	DatabaseAuthSource   string
 	Token                string
+	DBPath               string
 }
