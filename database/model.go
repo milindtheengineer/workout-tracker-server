@@ -23,6 +23,7 @@ type SessionRow struct {
 type Workout struct {
 	SessionID   int
 	WorkoutName string
+	UserID      int
 }
 
 type WorkoutRow struct {

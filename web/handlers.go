@@ -68,7 +68,7 @@ func (app *App) SessionListHandler(w http.ResponseWriter, r *http.Request) {
 
 // Get Workouts based on sessionId
 func (app *App) WorkoutListHandler(w http.ResponseWriter, r *http.Request) {
-	var workoutResponse []Workout
+	workoutResponse := []Workout{}
 	sessionIDstr := chi.URLParam(r, "sessionID")
 	if len(sessionIDstr) < 1 {
 		http.Error(w, "Invalid session ID", http.StatusBadRequest)
@@ -140,7 +140,7 @@ func (app *App) WorkoutCreateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 
 	}
-	if err := app.db.CreateWorkoutForSession(workout.SessionID, workout.WorkoutName); err != nil {
+	if err := app.db.CreateWorkoutForSession(workout.SessionID, strings.ToLower(workout.WorkoutName), workout.UserID); err != nil {
 		http.Error(w, "Could not decode workout", http.StatusInternalServerError)
 		return
 	}
@@ -161,4 +161,61 @@ func (app *App) SetCreateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusOK)
+}
+
+func (app *App) SessionCreateHandler(w http.ResponseWriter, r *http.Request) {
+	var session database.Session
+	if err := json.NewDecoder(r.Body).Decode(&session); err != nil {
+		app.logger.Error().Msgf("%v", err)
+		http.Error(w, "Could not decode session", http.StatusBadRequest)
+		return
+
+	}
+	if err := app.db.CreateSessionForUser(session.UserID); err != nil {
+		app.logger.Error().Msgf("%v", err)
+		http.Error(w, "Could not add session", http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+}
+
+// Get Sessions based on userID (restrict to 10 in the future maybe)
+func (app *App) LastWorkoutHandler(w http.ResponseWriter, r *http.Request) {
+	userIDStr := chi.URLParam(r, "userID")
+	if len(userIDStr) < 1 {
+		http.Error(w, "Invalid user id", http.StatusBadRequest)
+		return
+	}
+	workoutName := chi.URLParam(r, "workout")
+	if len(workoutName) < 1 {
+		http.Error(w, "Invalid workout name", http.StatusBadRequest)
+		return
+	}
+	userID, err := strconv.Atoi(userIDStr)
+	if err != nil {
+		http.Error(w, "Invalid user ID", http.StatusBadRequest)
+		return
+	}
+	workoutID, err := app.db.GetLastWorkoutID(workoutName, userID)
+	if err != nil {
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		app.logger.Error().Msgf("LastWorkoutHandler: %v", err)
+		return
+	}
+	var lastWorkoutDetails []database.SetRow
+	if workoutID > 0 {
+		lastWorkoutDetails, err = app.db.GetSetsByWorkoutId(workoutID)
+		if err != nil {
+			http.Error(w, "Internal server error", http.StatusInternalServerError)
+			app.logger.Error().Msgf("LastWorkoutHandler: %v", err)
+			return
+		}
+	}
+	body, err := json.Marshal(lastWorkoutDetails)
+	if err != nil {
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		app.logger.Error().Msgf("LastWorkoutHandler: %v", err)
+		return
+	}
+	w.Write(body)
 }

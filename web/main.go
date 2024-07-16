@@ -2,6 +2,7 @@ package web
 
 import (
 	"net/http"
+	"os"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -34,13 +35,14 @@ func StartRouter() {
 	}
 	app := App{
 		db:     db,
-		logger: zerolog.Logger{},
+		logger: zerolog.New(os.Stdout).With().Timestamp().Logger(),
 	}
 	r.Get("/health", HealthHandler)
 	r.Get("/sessions/{userID}", app.SessionListHandler)
 	r.Get("/workouts/{sessionID}", app.WorkoutListHandler)
 	r.Get("/sets/{workoutID}", app.SetListHandler)
-	r.Post("/sessions", app.SessionListHandler)
+	r.Get("/lastworkout/{userID}/{workout}", app.LastWorkoutHandler)
+	r.Post("/sessions", app.SessionCreateHandler)
 	r.Post("/workouts", app.WorkoutCreateHandler)
 	r.Post("/sets", app.SetCreateHandler)
 

@@ -59,7 +59,7 @@ func (d *DBConn) CreateSessionForUser(userID int) error {
 
 func (d *DBConn) GetSessionsByUserId(userId int) ([]SessionRow, error) {
 	// Query to get all sessions for the specified userID
-	query := "SELECT sessionID, userID, dateTime FROM Session WHERE userID = ?"
+	query := "SELECT sessionID, userID, dateTime FROM Session WHERE userID = ? ORDER BY sessionID DESC"
 
 	// Execute the query
 	rows, err := d.db.Query(query, userId)
@@ -88,7 +88,7 @@ func (d *DBConn) GetSessionsByUserId(userId int) ([]SessionRow, error) {
 
 func (d *DBConn) GetWorkoutsBySessionId(sessionId int) ([]WorkoutRow, error) {
 	// Query to get workouts for the specified sessionID
-	query := "SELECT workoutID, sessionID, workoutname FROM Workouts WHERE sessionID = ?"
+	query := "SELECT workoutID, sessionID, workoutname FROM Workouts WHERE sessionID = ? ORDER BY workoutID DESC"
 
 	// Execute the query
 	rows, err := d.db.Query(query, sessionId)
@@ -116,15 +116,15 @@ func (d *DBConn) GetWorkoutsBySessionId(sessionId int) ([]WorkoutRow, error) {
 	return workouts, nil
 }
 
-func (d *DBConn) CreateWorkoutForSession(sessionId int, workoutname string) error {
-	stmt, err := d.db.Prepare("INSERT INTO Workouts (sessionID, workoutname) VALUES (?, ?)")
+func (d *DBConn) CreateWorkoutForSession(sessionId int, workoutname string, userId int) error {
+	stmt, err := d.db.Prepare("INSERT INTO Workouts (sessionID, workoutname, userID) VALUES (?, ?, ?)")
 	if err != nil {
 		return fmt.Errorf("Error preparing statement: %w", err)
 	}
 	defer stmt.Close()
 
 	// Execute the insert statement
-	_, err = stmt.Exec(sessionId, workoutname)
+	_, err = stmt.Exec(sessionId, workoutname, userId)
 	if err != nil {
 		return fmt.Errorf("Error inserting new workout: %w", err)
 	}
@@ -166,7 +166,7 @@ func (d *DBConn) CreateSetForWorkout(workoutId int, numberofReps int, weight flo
 
 func (d *DBConn) GetSetsByWorkoutId(workoutID int) ([]SetRow, error) {
 	// Query to get sets for the specified workoutID
-	query := "SELECT setID, numberofReps, weight, workoutID FROM Sets WHERE workoutID = ?"
+	query := "SELECT setID, numberofReps, weight, workoutID FROM Sets WHERE workoutID = ? ORDER BY setID DESC"
 
 	// Execute the query
 	rows, err := d.db.Query(query, workoutID)
@@ -191,4 +191,19 @@ func (d *DBConn) GetSetsByWorkoutId(workoutID int) ([]SetRow, error) {
 		return nil, fmt.Errorf("GetSetsByWorkoutId: %w", err)
 	}
 	return sets, nil
+}
+
+func (d *DBConn) GetLastWorkoutID(workoutName string, userID int) (int, error) {
+	var workoutID int
+	query := `
+        SELECT workoutID
+        FROM Workouts
+        WHERE workoutName = ? AND userID = ?
+        ORDER BY workoutID DESC
+        LIMIT 1 OFFSET 1
+    `
+	if err := d.db.QueryRow(query, workoutName, userID).Scan(&workoutID); err != nil && err != sql.ErrNoRows {
+		return workoutID, err
+	}
+	return workoutID, nil
 }

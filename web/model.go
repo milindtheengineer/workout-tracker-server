@@ -6,3 +6,7 @@ type Workout struct {
 	database.WorkoutRow
 	Sets []database.SetRow
 }
+
+type WorkoutIDResponse struct {
+	WorkoutID int
+}
