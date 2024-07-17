@@ -137,11 +137,17 @@ func (app *App) WorkoutCreateHandler(w http.ResponseWriter, r *http.Request) {
 	var workout database.Workout
 	if err := json.NewDecoder(r.Body).Decode(&workout); err != nil {
 		http.Error(w, "Could not decode workout", http.StatusBadRequest)
+		app.logger.Error().Msgf("WorkoutCreateHandler: %v", err)
 		return
 
 	}
 	if err := app.db.CreateWorkoutForSession(workout.SessionID, strings.ToLower(workout.WorkoutName), workout.UserID); err != nil {
+		if strings.Contains(err.Error(), "Workout already exists") {
+			http.Error(w, "Workout already exists", http.StatusConflict)
+			return
+		}
 		http.Error(w, "Could not decode workout", http.StatusInternalServerError)
+		app.logger.Error().Msgf("WorkoutCreateHandler: %v", err)
 		return
 	}
 	w.WriteHeader(http.StatusOK)

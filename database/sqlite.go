@@ -5,7 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	_ "modernc.org/sqlite"
+	"modernc.org/sqlite"
+	sqlite3 "modernc.org/sqlite/lib"
 )
 
 type DBConn struct {
@@ -126,6 +127,11 @@ func (d *DBConn) CreateWorkoutForSession(sessionId int, workoutname string, user
 	// Execute the insert statement
 	_, err = stmt.Exec(sessionId, workoutname, userId)
 	if err != nil {
+		sqliteErr, ok := err.(*sqlite.Error)
+		if ok && sqliteErr.Code() == sqlite3.SQLITE_CONSTRAINT_UNIQUE {
+			return fmt.Errorf("Workout already exists: workout with name %s for session %d already exists for user %d", workoutname, sessionId, userId)
+		}
+
 		return fmt.Errorf("Error inserting new workout: %w", err)
 	}
 	return nil
