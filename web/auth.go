@@ -29,7 +29,7 @@ func (app *App) HandleLogin(w http.ResponseWriter, r *http.Request) {
 		app.logger.Error().Msgf("GetUserByEmail: %v", err)
 		return
 	}
-	expirationTime := time.Now().Add(1 * time.Minute)
+	expirationTime := time.Now().Add(24 * time.Hour)
 	claims := &Claims{
 		UserID: strconv.Itoa(user.Id),
 		RegisteredClaims: jwt.RegisteredClaims{
