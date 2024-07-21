@@ -11,4 +11,6 @@ type Config struct {
 	DatabaseAuthSource   string
 	Token                string
 	DBPath               string
+	GoogleToken          string
+	SigningKey           string
 }

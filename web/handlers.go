@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/milindtheengineer/workout-tracker-server/config"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/milindtheengineer/workout-tracker-server/database"
 	"github.com/rs/zerolog"
 )
@@ -21,23 +21,14 @@ type App struct {
 	logger zerolog.Logger
 }
 
-func authMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		authHeader := r.Header.Get("Authorization")
-		if authHeader == "" {
-			http.Error(w, "Authorization header required", http.StatusUnauthorized)
-			return
-		}
-		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
-		if tokenString != config.AppConfig.Token {
-			http.Error(w, "Invalid token", http.StatusUnauthorized)
-			return
-		}
-		next.ServeHTTP(w, r)
-	})
+type LoginInfo struct {
+	Credential string `json:"credential"`
 }
 
-// All gets
+type Claims struct {
+	UserID string `json:"userId"`
+	jwt.RegisteredClaims
+}
 
 // Get Sessions based on userID (restrict to 10 in the future maybe)
 func (app *App) SessionListHandler(w http.ResponseWriter, r *http.Request) {

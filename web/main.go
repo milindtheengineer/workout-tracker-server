@@ -38,13 +38,17 @@ func StartRouter() {
 		logger: zerolog.New(os.Stdout).With().Timestamp().Logger(),
 	}
 	r.Get("/health", HealthHandler)
-	r.Get("/sessions/{userID}", app.SessionListHandler)
-	r.Get("/workouts/{sessionID}", app.WorkoutListHandler)
-	r.Get("/sets/{workoutID}", app.SetListHandler)
-	r.Get("/lastworkout/{userID}/{workout}", app.LastWorkoutHandler)
-	r.Post("/sessions", app.SessionCreateHandler)
-	r.Post("/workouts", app.WorkoutCreateHandler)
-	r.Post("/sets", app.SetCreateHandler)
+	r.Post("/login", app.HandleLogin)
+	r.Group(func(r chi.Router) {
+		r.Use(authMiddleware)
+		r.Get("/sessions/{userID}", app.SessionListHandler)
+		r.Get("/workouts/{sessionID}", app.WorkoutListHandler)
+		r.Get("/sets/{workoutID}", app.SetListHandler)
+		r.Get("/lastworkout/{userID}/{workout}", app.LastWorkoutHandler)
+		r.Post("/sessions", app.SessionCreateHandler)
+		r.Post("/workouts", app.WorkoutCreateHandler)
+		r.Post("/sets", app.SetCreateHandler)
+	})
 
 	// r.GET("/v1/user", authMiddleware(user.Crud))
 	if err := http.ListenAndServe(":8080", r); err != nil {

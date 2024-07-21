@@ -12,6 +12,5 @@ func main() {
 	if err := config.InitialiseConfig(); err != nil {
 		log.Panic().Msgf("Config could not be initialized due to %v", err)
 	}
-	log.Info().Msgf("Config is %v", config.AppConfig)
 	web.StartRouter()
 }
