@@ -59,7 +59,7 @@ func (app *App) HandleLogin(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func authMiddleware(next http.Handler) http.Handler {
+func (app *App) authMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		token, err := r.Cookie("token")
 		if err != nil {
@@ -67,7 +67,7 @@ func authMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		userID, err := DecodeJWT(token.Value)
+		userID, err := app.decodeJWT(token.Value)
 		if err != nil {
 			http.Error(w, "Invalid token", http.StatusUnauthorized)
 			return
@@ -78,7 +78,7 @@ func authMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-func DecodeJWT(tokenStr string) (string, error) {
+func (app *App) decodeJWT(tokenStr string) (string, error) {
 	token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
 		// Don't forget to validate the alg is what you expect:
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
@@ -97,7 +97,7 @@ func DecodeJWT(tokenStr string) (string, error) {
 	if !ok {
 		return "", fmt.Errorf("DecodeJWT:: Invalid claims")
 	}
-	userID, ok := claims["UserID"].(string)
+	userID, ok := claims["UserId"].(string)
 	if !ok {
 		return "", fmt.Errorf("DecodeJWT:: User ID not found in claims")
 	}
