@@ -32,8 +32,8 @@ type Claims struct {
 
 // Get Sessions based on userID (restrict to 10 in the future maybe)
 func (app *App) SessionListHandler(w http.ResponseWriter, r *http.Request) {
-	userIDStr := chi.URLParam(r, "userID")
-	if len(userIDStr) < 1 {
+	userIDStr, ok := r.Context().Value(contextKeyUserID).(string)
+	if !ok {
 		http.Error(w, "Invalid user ID", http.StatusBadRequest)
 		return
 	}
@@ -178,9 +178,9 @@ func (app *App) SessionCreateHandler(w http.ResponseWriter, r *http.Request) {
 
 // Get Sessions based on userID (restrict to 10 in the future maybe)
 func (app *App) LastWorkoutHandler(w http.ResponseWriter, r *http.Request) {
-	userIDStr := chi.URLParam(r, "userID")
-	if len(userIDStr) < 1 {
-		http.Error(w, "Invalid user id", http.StatusBadRequest)
+	userIDStr, ok := r.Context().Value(contextKeyUserID).(string)
+	if !ok {
+		http.Error(w, "Invalid user ID", http.StatusBadRequest)
 		return
 	}
 	workoutName := chi.URLParam(r, "workout")

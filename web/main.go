@@ -41,10 +41,10 @@ func StartRouter() {
 	r.Post("/login", app.HandleLogin)
 	r.Group(func(r chi.Router) {
 		r.Use(authMiddleware)
-		r.Get("/sessions/{userID}", app.SessionListHandler)
+		r.Get("/sessions", app.SessionListHandler)
 		r.Get("/workouts/{sessionID}", app.WorkoutListHandler)
 		r.Get("/sets/{workoutID}", app.SetListHandler)
-		r.Get("/lastworkout/{userID}/{workout}", app.LastWorkoutHandler)
+		r.Get("/lastworkout/{workout}", app.LastWorkoutHandler)
 		r.Post("/sessions", app.SessionCreateHandler)
 		r.Post("/workouts", app.WorkoutCreateHandler)
 		r.Post("/sets", app.SetCreateHandler)

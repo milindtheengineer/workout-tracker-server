@@ -13,6 +13,12 @@ import (
 	"google.golang.org/api/idtoken"
 )
 
+type contextKey string
+
+var contextKeyUserID = contextKey("userID")
+
+const userIDKey = "userID"
+
 func (app *App) HandleLogin(w http.ResponseWriter, r *http.Request) {
 	var loginInfo LoginInfo
 	if err := json.NewDecoder(r.Body).Decode(&loginInfo); err != nil {
@@ -61,15 +67,18 @@ func authMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		if err := DecodeJWT(token.Value); err != nil {
+		userID, err := DecodeJWT(token.Value)
+		if err != nil {
 			http.Error(w, "Invalid token", http.StatusUnauthorized)
 			return
 		}
-		next.ServeHTTP(w, r)
+
+		ctx := context.WithValue(r.Context(), contextKeyUserID, userID)
+		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 
-func DecodeJWT(tokenStr string) error {
+func DecodeJWT(tokenStr string) (string, error) {
 	token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
 		// Don't forget to validate the alg is what you expect:
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
@@ -78,12 +87,19 @@ func DecodeJWT(tokenStr string) error {
 		return []byte(config.AppConfig.SigningKey), nil
 	})
 	if err != nil {
-		return fmt.Errorf("DecodeJWT: %v", err)
+		return "", fmt.Errorf("DecodeJWT: %v", err)
 	}
-
 	if !token.Valid {
-		return fmt.Errorf("DecodeJWT:: invalid token")
+		return "", fmt.Errorf("DecodeJWT:: invalid token")
 	}
 
-	return nil
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return "", fmt.Errorf("DecodeJWT:: Invalid claims")
+	}
+	userID, ok := claims["UserID"].(string)
+	if !ok {
+		return "", fmt.Errorf("DecodeJWT:: User ID not found in claims")
+	}
+	return userID, nil
 }
