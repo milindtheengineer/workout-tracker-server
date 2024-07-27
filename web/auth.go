@@ -69,6 +69,7 @@ func (app *App) authMiddleware(next http.Handler) http.Handler {
 
 		userID, err := app.decodeJWT(token.Value)
 		if err != nil {
+			app.logger.Error().Msgf("decode: %w", err)
 			http.Error(w, "Invalid token", http.StatusUnauthorized)
 			return
 		}
