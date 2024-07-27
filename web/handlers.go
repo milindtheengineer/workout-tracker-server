@@ -125,14 +125,23 @@ func (app *App) SetListHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *App) WorkoutCreateHandler(w http.ResponseWriter, r *http.Request) {
+	userIDStr, ok := r.Context().Value(contextKeyUserID).(string)
+	if !ok {
+		http.Error(w, "Invalid user ID", http.StatusBadRequest)
+		return
+	}
+	userID, err := strconv.Atoi(userIDStr)
+	if err != nil {
+		http.Error(w, "Invalid user ID", http.StatusBadRequest)
+		return
+	}
 	var workout database.Workout
 	if err := json.NewDecoder(r.Body).Decode(&workout); err != nil {
 		http.Error(w, "Could not decode workout", http.StatusBadRequest)
 		app.logger.Error().Msgf("WorkoutCreateHandler: %v", err)
 		return
-
 	}
-	if err := app.db.CreateWorkoutForSession(workout.SessionID, strings.ToLower(workout.WorkoutName), workout.UserID); err != nil {
+	if err := app.db.CreateWorkoutForSession(workout.SessionID, strings.ToLower(workout.WorkoutName), userID); err != nil {
 		if strings.Contains(err.Error(), "Workout already exists") {
 			http.Error(w, "Workout already exists", http.StatusConflict)
 			return
@@ -161,14 +170,17 @@ func (app *App) SetCreateHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *App) SessionCreateHandler(w http.ResponseWriter, r *http.Request) {
-	var session database.Session
-	if err := json.NewDecoder(r.Body).Decode(&session); err != nil {
-		app.logger.Error().Msgf("%v", err)
-		http.Error(w, "Could not decode session", http.StatusBadRequest)
+	userIDStr, ok := r.Context().Value(contextKeyUserID).(string)
+	if !ok {
+		http.Error(w, "Invalid user ID", http.StatusBadRequest)
 		return
-
 	}
-	if err := app.db.CreateSessionForUser(session.UserID); err != nil {
+	userID, err := strconv.Atoi(userIDStr)
+	if err != nil {
+		http.Error(w, "Invalid user ID", http.StatusBadRequest)
+		return
+	}
+	if err := app.db.CreateSessionForUser(userID); err != nil {
 		app.logger.Error().Msgf("%v", err)
 		http.Error(w, "Could not add session", http.StatusInternalServerError)
 		return
