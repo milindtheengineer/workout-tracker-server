@@ -98,7 +98,7 @@ func (app *App) decodeJWT(tokenStr string) (string, error) {
 	if !ok {
 		return "", fmt.Errorf("DecodeJWT:: Invalid claims")
 	}
-	userID, ok := claims["UserId"].(string)
+	userID, ok := claims["userId"].(string)
 	if !ok {
 		return "", fmt.Errorf("DecodeJWT:: User ID not found in claims")
 	}
