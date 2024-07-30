@@ -36,7 +36,7 @@ func (app *App) HandleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 	user, err := app.db.GetUserByEmail(payload.Claims["email"].(string))
 	if err != nil {
-		if strings.Contains(err.Error(), "No user found") {
+		if strings.Contains(err.Error(), "no user found") {
 			id, err := app.db.CreateUser(database.User{Email: payload.Claims["email"].(string), Name: "test"})
 			if err != nil {
 				http.Error(w, "Unauthenticated", http.StatusUnauthorized)
