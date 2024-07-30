@@ -6,10 +6,12 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/milindtheengineer/workout-tracker-server/config"
+	"github.com/milindtheengineer/workout-tracker-server/database"
 	"google.golang.org/api/idtoken"
 )
 
@@ -22,18 +24,31 @@ const userIDKey = "userID"
 func (app *App) HandleLogin(w http.ResponseWriter, r *http.Request) {
 	var loginInfo LoginInfo
 	if err := json.NewDecoder(r.Body).Decode(&loginInfo); err != nil {
+		http.Error(w, "Unauthenticated", http.StatusUnauthorized)
 		app.logger.Error().Msgf("Decode: %v", err)
 		return
 	}
 	payload, err := idtoken.Validate(context.Background(), loginInfo.Credential, config.AppConfig.GoogleToken)
 	if err != nil {
+		http.Error(w, "Unauthenticated", http.StatusUnauthorized)
 		app.logger.Error().Msgf("Validate: %v", err)
 		return
 	}
 	user, err := app.db.GetUserByEmail(payload.Claims["email"].(string))
 	if err != nil {
-		app.logger.Error().Msgf("GetUserByEmail: %v", err)
-		return
+		if strings.Contains(err.Error(), "No user found") {
+			id, err := app.db.CreateUser(database.User{Email: payload.Claims["email"].(string), Name: "test"})
+			if err != nil {
+				http.Error(w, "Unauthenticated", http.StatusUnauthorized)
+				app.logger.Error().Msgf("GetUserByEmail: %v", err)
+				return
+			}
+			user = database.UserRow{Id: int(id)}
+		} else {
+			http.Error(w, "Unauthenticated", http.StatusUnauthorized)
+			app.logger.Error().Msgf("GetUserByEmail: %v", err)
+			return
+		}
 	}
 	expirationTime := time.Now().Add(24 * time.Hour)
 	claims := &Claims{
@@ -47,7 +62,7 @@ func (app *App) HandleLogin(w http.ResponseWriter, r *http.Request) {
 	tokenString, err := token.SignedString([]byte(config.AppConfig.SigningKey))
 	if err != nil {
 		app.logger.Error().Msgf("%v", err)
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		http.Error(w, "Unauthenticated", http.StatusUnauthorized)
 		return
 	}
 
