@@ -71,6 +71,7 @@ func (app *App) HandleLogin(w http.ResponseWriter, r *http.Request) {
 		Value:    tokenString,
 		Expires:  expirationTime,
 		SameSite: http.SameSiteNoneMode,
+		Secure:   true,
 	})
 }
 
