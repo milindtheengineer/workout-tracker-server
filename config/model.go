@@ -13,4 +13,5 @@ type Config struct {
 	DBPath               string
 	GoogleToken          string
 	SigningKey           string
+	Cors                 []string
 }
